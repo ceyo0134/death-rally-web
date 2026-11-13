@@ -2,51 +2,99 @@
 <html lang="tr"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
 <title>Death Rally</title>
 <link rel="stylesheet" href="js-dos/js-dos.css">
 <style>
-:root{--bg:#0b0b0d;--fg:#eee;--btn:#2a2a30;--btn-on:#c0392b;box-sizing:border-box;
- padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif;
- overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-body{display:flex;flex-direction:column}
-#game{width:100%;aspect-ratio:4/3;max-height:62vh;margin:0 auto;background:#000;position:relative}
-#pad{flex:1;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;gap:10px;touch-action:none}
-.dpad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(3,64px);gap:6px}
-.act{display:grid;grid-template-columns:repeat(2,76px);gap:8px}
+:root{--btn:rgba(60,60,68,.78);--btn-on:rgba(192,57,43,.95);--fg:#f2f2f2;box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:var(--fg);font:15px system-ui,sans-serif;overflow:hidden;
+ overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+/* #app her zaman ekranı kaplar: tam ekranda kontroller de içeride kalır */
+#app{position:fixed;inset:0;background:#000}
+#game{position:absolute;background:#000}
+#msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;color:#aaa}
 button{touch-action:none;border:0;border-radius:14px;background:var(--btn);color:var(--fg);font:600 15px system-ui;
- -webkit-tap-highlight-color:transparent}
+ -webkit-tap-highlight-color:transparent;backdrop-filter:blur(2px)}
 button.on{background:var(--btn-on)}
 .sp{visibility:hidden}
-@media (min-width:900px){#pad{display:none}#game{max-height:none;max-width:960px}}
+#pad{position:absolute;display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none}
+#pad .dpad,#pad .act{pointer-events:auto;display:grid;gap:6px}
+.dpad{grid-template-columns:repeat(3,var(--c));grid-template-rows:repeat(3,var(--c))}
+.act{grid-template-columns:repeat(2,calc(var(--c)*1.15))}
+.act button{height:var(--c)}
+#fs{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));
+ width:44px;height:44px;z-index:5;font-size:20px;opacity:.7}
+/* Dikey: oyun üstte, kontroller altta */
+@media (orientation:portrait){
+ #game{top:env(safe-area-inset-top,0px);left:0;width:100%;aspect-ratio:4/3}
+ #pad{left:0;right:0;bottom:0;top:calc(75vw + env(safe-area-inset-top,0px));--c:min(19vw,76px);
+  padding:0 14px calc(18px + env(safe-area-inset-bottom,0px));align-items:center}
+}
+/* Yatay: oyun ortada tam yükseklik, kontroller iki yanda (yer kalmazsa üstüne biner) */
+@media (orientation:landscape){
+ #game{top:0;bottom:0;left:50%;transform:translateX(-50%);height:100%;aspect-ratio:4/3}
+ #pad{inset:0;--c:min(15vh,58px);
+  padding:0 calc(14px + env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px))}
+}
+#start{position:absolute;inset:0;z-index:10;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+#start h1{margin:0;font:800 34px system-ui;letter-spacing:2px}
+#start button{padding:16px 44px;font-size:20px;background:#c0392b;color:#fff}
 </style></head><body>
-<div id="game"></div>
-<div id="pad">
- <div class="dpad">
-  <span class="sp"></span><button data-k="265">▲</button><span class="sp"></span>
-  <button data-k="263">◀</button><span class="sp"></span><button data-k="262">▶</button>
-  <span class="sp"></span><button data-k="264">▼</button><span class="sp"></span>
+<div id="app">
+ <div id="game"></div>
+ <div id="msg"></div>
+ <button id="fs" aria-label="Tam ekran">⛶</button>
+ <div id="pad">
+  <div class="dpad">
+   <span class="sp"></span><button data-k="265">▲</button><span class="sp"></span>
+   <button data-k="263">◀</button><span class="sp"></span><button data-k="262">▶</button>
+   <span class="sp"></span><button data-k="264">▼</button><span class="sp"></span>
+  </div>
+  <div class="act">
+   <button data-k="341">Ctrl</button><button data-k="342">Alt</button>
+   <button data-k="32">Boşluk</button><button data-k="257">Enter</button>
+   <button data-k="256">Esc</button><button data-k="258">Tab</button>
+  </div>
  </div>
- <div class="act">
-  <button data-k="341">Ctrl</button><button data-k="342">Alt</button>
-  <button data-k="32">Boşluk</button><button data-k="257">Enter</button>
-  <button data-k="256">Esc</button><button data-k="258">Tab</button>
- </div>
+ <div id="start"><h1>DEATH RALLY</h1><button id="play">Oyna</button></div>
 </div>
 <script src="js-dos/js-dos.js"></script>
 <script>
-var ci=null;
-Dos(document.getElementById('game'),{
-  url:'game/death-rally.jsdos',
-  pathPrefix:'js-dos/emulators/',
-  onEvent:function(e,arg){ if(e==='ci-ready') ci=arg; }
+var ci=null, app=document.getElementById('app'), msg=document.getElementById('msg');
+
+/* Tam ekran: js-dos'un kendi düğmesi yerine #app'i tam ekran yapıyoruz (kontroller içeride kalır) */
+function isFs(){return document.fullscreenElement||document.webkitFullscreenElement}
+async function toggleFs(){
+  try{
+    if(isFs()){(document.exitFullscreen||document.webkitExitFullscreen).call(document);return}
+    var r=app.requestFullscreen||app.webkitRequestFullscreen;
+    if(r){await r.call(app)}
+    if(screen.orientation&&screen.orientation.lock){try{await screen.orientation.lock('landscape')}catch(e){}}
+  }catch(e){}
+}
+document.getElementById('fs').addEventListener('click',toggleFs);
+
+/* Başlat: ses ve tam ekran için kullanıcı dokunuşu gerekir */
+document.getElementById('play').addEventListener('click',function(){
+  document.getElementById('start').remove();
+  msg.textContent='Yükleniyor… (43 MB)';
+  Dos(document.getElementById('game'),{
+    url:'game/death-rally.jsdos',
+    pathPrefix:'js-dos/emulators/',
+    autoStart:true,
+    kiosk:true,
+    onEvent:function(e,arg){
+      if(e==='ci-ready'){ci=arg;msg.textContent=''}
+    }
+  });
 });
-// Touch / mouse buttons -> DOS key events (GLFW key codes used by js-dos)
+
+/* Dokunmatik tuşlar -> DOS tuş olayları (js-dos GLFW tuş kodları) */
 document.querySelectorAll('#pad button').forEach(function(b){
   var k=+b.dataset.k;
   function down(ev){ev.preventDefault();b.classList.add('on');if(ci)ci.sendKeyEvent(k,true)}
   function up(ev){ev.preventDefault();b.classList.remove('on');if(ci)ci.sendKeyEvent(k,false)}
-  b.addEventListener('pointerdown',function(ev){b.setPointerCapture(ev.pointerId);down(ev)});
+  b.addEventListener('pointerdown',function(ev){try{b.setPointerCapture(ev.pointerId)}catch(e){}down(ev)});
   b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);
   b.addEventListener('contextmenu',function(ev){ev.preventDefault()});
 });

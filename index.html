@@ -9,51 +9,111 @@
 :root{--btn:rgba(60,60,68,.78);--btn-on:rgba(192,57,43,.95);--fg:#f2f2f2;box-sizing:border-box}
 html,body{margin:0;height:100%;background:#000;color:var(--fg);font:15px system-ui,sans-serif;overflow:hidden;
  overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
-/* #app her zaman ekranı kaplar: tam ekranda kontroller de içeride kalır */
-#app{position:fixed;inset:0;background:#000}
-#game{position:absolute;background:#000}
-#msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;color:#aaa}
+/* #app her zaman ekranı kaplar; kendi stacking context'i var, kontroller (z-index:1000) js-dos'un tam ekran katmanının (999) üstünde kalır */
+#app{position:fixed;inset:0;background:#000;z-index:0}
+#game{position:absolute;background:#000;z-index:1;overflow:hidden}
+/* js-dos kendi "fullscreen workaround" katmanını viewport'a yayıyor ve kontrolleri örtüyordu: onu #game içinde tut */
+#game .jsdos-rso,#game .jsdos-rso .emulator-fullscreen-workaround,#game .jsdos-rso .jsdos-fullscreen-workaround{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;z-index:1!important}
+#msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;color:#aaa;z-index:2}
 button{touch-action:none;border:0;border-radius:14px;background:var(--btn);color:var(--fg);font:600 15px system-ui;
  -webkit-tap-highlight-color:transparent;backdrop-filter:blur(2px)}
 button.on{background:var(--btn-on)}
 .sp{visibility:hidden}
-#pad{position:absolute;display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none}
-#pad .dpad,#pad .act{pointer-events:auto;display:grid;gap:6px}
+
+/* Kontroller */
+#pad{position:absolute;inset:0;z-index:1000;pointer-events:none;--o:.85}
+.grp{position:absolute;pointer-events:auto;display:grid;gap:6px;opacity:var(--o);
+ transform:translate(var(--dx,0px),calc(var(--by,0px) + var(--dy,0px))) scale(var(--s,1))}
 .dpad{grid-template-columns:repeat(3,var(--c));grid-template-rows:repeat(3,var(--c))}
 .act{grid-template-columns:repeat(2,calc(var(--c)*1.15))}
 .act button{height:var(--c)}
-#fs{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));
- width:44px;height:44px;z-index:5;font-size:20px;opacity:.7}
-/* Dikey: oyun üstte, kontroller altta */
+body.edit .grp{outline:2px dashed #f1c40f;outline-offset:6px;cursor:move;touch-action:none}
+body.edit .grp button{pointer-events:none}
+
+#fs,#cfgBtn{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));width:44px;height:44px;z-index:1100;font-size:20px;opacity:.7}
+#fs{right:calc(8px + env(safe-area-inset-right,0px))}
+#cfgBtn{right:calc(60px + env(safe-area-inset-right,0px))}
+
+/* Dikey: oyun üstte, kontroller altta ortada */
 @media (orientation:portrait){
- #game{top:env(safe-area-inset-top,0px);left:0;width:100%;aspect-ratio:4/3}
- #pad{left:0;right:0;bottom:0;top:calc(75vw + env(safe-area-inset-top,0px));--c:min(19vw,76px);
-  padding:0 14px calc(18px + env(safe-area-inset-bottom,0px));align-items:center}
+ #game{top:env(safe-area-inset-top,0px);left:0;width:100%;height:75vw}
+ #pad{--c:min(19vw,76px);--by:-50%}
+ .grp{top:calc(75vw + env(safe-area-inset-top,0px) + (100dvh - 75vw - env(safe-area-inset-top,0px))/2)}
+ .dpad{left:14px;transform-origin:left center}
+ .act{right:14px;transform-origin:right center}
 }
-/* Yatay: oyun ortada tam yükseklik, kontroller iki yanda (yer kalmazsa üstüne biner) */
+/* Yatay: oyun ortada tam yükseklik, kontroller iki yanda (taşıyıp küçültebilirsin) */
 @media (orientation:landscape){
- #game{top:0;bottom:0;left:50%;transform:translateX(-50%);height:100%;aspect-ratio:4/3}
- #pad{inset:0;--c:min(15vh,58px);
-  padding:0 calc(14px + env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px))}
+ #game{--gh:min(100dvh,75vw);inset:0;margin:auto;height:var(--gh);width:calc(var(--gh)*4/3)}
+ #pad{--c:min(15vh,58px);--by:0px}
+ .grp{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+ .dpad{left:calc(14px + env(safe-area-inset-left,0px));transform-origin:left bottom}
+ .act{right:calc(14px + env(safe-area-inset-right,0px));transform-origin:right bottom}
 }
-#start{position:absolute;inset:0;z-index:10;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+
+/* Yer değiştir: yön tuşları sağa, aksiyon tuşları sola */
+@media (orientation:portrait){
+ body.swap .dpad{left:auto;right:14px;transform-origin:right center}
+ body.swap .act{right:auto;left:14px;transform-origin:left center}
+}
+@media (orientation:landscape){
+ body.swap .dpad{left:auto;right:calc(14px + env(safe-area-inset-right,0px));transform-origin:right bottom}
+ body.swap .act{right:auto;left:calc(14px + env(safe-area-inset-left,0px));transform-origin:left bottom}
+}
+
+/* Ayar paneli */
+#panel{position:absolute;z-index:1200;top:calc(58px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));
+ width:min(310px,calc(100vw - 16px));max-height:calc(100dvh - 76px - env(safe-area-inset-top,0px));overflow-y:auto;touch-action:pan-y;
+ background:rgba(24,24,28,.96);border:1px solid #444;border-radius:16px;padding:12px 14px;box-sizing:border-box;display:none}
+#panel.open{display:block}
+#panel h2{margin:0 0 8px;font:700 16px system-ui}
+#panel label{display:flex;justify-content:space-between;align-items:center;margin:10px 0 2px;font-size:14px}
+#panel input[type=range]{width:100%;margin:2px 0 6px;touch-action:pan-y}
+#panel .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+#panel .row button{flex:1 1 auto;padding:10px 12px;font-size:14px}
+#panel .keys{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:4px}
+#panel .keys label{margin:2px 0;justify-content:flex-start;gap:8px}
+#editBtn.on{background:#d4a017;color:#000}
+#start{position:absolute;inset:0;z-index:1300;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
 #start h1{margin:0;font:800 34px system-ui;letter-spacing:2px}
 #start button{padding:16px 44px;font-size:20px;background:#c0392b;color:#fff}
 </style></head><body>
 <div id="app">
  <div id="game"></div>
  <div id="msg"></div>
+ <button id="cfgBtn" aria-label="Kontrol ayarları">⚙</button>
  <button id="fs" aria-label="Tam ekran">⛶</button>
  <div id="pad">
-  <div class="dpad">
+  <div class="grp dpad" data-g="dpad">
    <span class="sp"></span><button data-k="265">▲</button><span class="sp"></span>
    <button data-k="263">◀</button><span class="sp"></span><button data-k="262">▶</button>
    <span class="sp"></span><button data-k="264">▼</button><span class="sp"></span>
   </div>
-  <div class="act">
+  <div class="grp act" data-g="act">
    <button data-k="341">Ctrl</button><button data-k="342">Alt</button>
    <button data-k="32">Boşluk</button><button data-k="257">Enter</button>
    <button data-k="256">Esc</button><button data-k="258">Tab</button>
+  </div>
+ </div>
+ <div id="panel">
+  <h2>Kontrol ayarları <small id="oriLbl" style="font-weight:400;color:#aaa"></small></h2>
+  <div class="row" style="margin-top:0">
+   <button id="editBtn">✥ Taşı (sürükle)</button>
+   <button id="swapBtn">⇄ Yer değiştir</button>
+  </div>
+  <label>Yön tuşları boyutu <span id="vD"></span></label>
+  <input type="range" id="sD" min="50" max="220" step="5">
+  <label>Aksiyon tuşları boyutu <span id="vA"></span></label>
+  <input type="range" id="sA" min="50" max="220" step="5">
+  <label>Şeffaflık <span id="vO"></span></label>
+  <input type="range" id="sO" min="15" max="100" step="5">
+  <label style="margin-bottom:0">Gösterilecek tuşlar</label>
+  <div class="keys" id="keys"></div>
+  <div class="row">
+   <button id="hideBtn">Kontrolleri gizle</button>
+   <button id="resetBtn">Sıfırla</button>
+   <button id="closeBtn">Tamam</button>
   </div>
  </div>
  <div id="start"><h1>DEATH RALLY</h1><button id="play">Oyna</button></div>
@@ -92,10 +152,104 @@ document.getElementById('play').addEventListener('click',function(){
 /* Dokunmatik tuşlar -> DOS tuş olayları (js-dos GLFW tuş kodları) */
 document.querySelectorAll('#pad button').forEach(function(b){
   var k=+b.dataset.k;
-  function down(ev){ev.preventDefault();b.classList.add('on');if(ci)ci.sendKeyEvent(k,true)}
+  function down(ev){if(document.body.classList.contains('edit'))return;ev.preventDefault();b.classList.add('on');if(ci)ci.sendKeyEvent(k,true)}
   function up(ev){ev.preventDefault();b.classList.remove('on');if(ci)ci.sendKeyEvent(k,false)}
-  b.addEventListener('pointerdown',function(ev){try{b.setPointerCapture(ev.pointerId)}catch(e){}down(ev)});
+  b.addEventListener('pointerdown',function(ev){if(document.body.classList.contains('edit'))return;try{b.setPointerCapture(ev.pointerId)}catch(e){}down(ev)});
   b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);
   b.addEventListener('contextmenu',function(ev){ev.preventDefault()});
 });
+
+/* ===== Kontrol ayarları (konum, boyut, şeffaflık, tuş gizleme) — localStorage'a kaydedilir ===== */
+(function(){
+  var KEY='drw-ctl-v2', pad=document.getElementById('pad'), panel=document.getElementById('panel');
+  var groups={dpad:pad.querySelector('[data-g=dpad]'),act:pad.querySelector('[data-g=act]')};
+  var btns=[].slice.call(pad.querySelectorAll('button'));
+  function mk(){return {dpad:{x:0,y:0,s:1},act:{x:0,y:0,s:1}}}
+  var cfg={o:.85,hide:[],allHidden:false,swap:false,p:mk(),l:mk()};
+  try{var j=JSON.parse(localStorage.getItem(KEY)||'null');
+    if(j){['o','hide','allHidden','swap'].forEach(function(k){if(j[k]!==undefined)cfg[k]=j[k]});
+      ['p','l'].forEach(function(o){if(j[o])['dpad','act'].forEach(function(g){if(j[o][g])cfg[o][g]=Object.assign({x:0,y:0,s:1},j[o][g])})})}}catch(e){}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(cfg))}catch(e){}}
+  function portrait(){return window.matchMedia('(orientation:portrait)').matches}
+  function L(){return cfg[portrait()?'p':'l']}
+  function $(id){return document.getElementById(id)}
+
+  // tuş gösterme kutuları
+  var keysBox=$('keys');
+  btns.filter(function(b){return b.closest('.act')}).forEach(function(b){
+    var l=document.createElement('label'),c=document.createElement('input');
+    c.type='checkbox';c.dataset.k=b.dataset.k;
+    c.addEventListener('change',function(){
+      var i=cfg.hide.indexOf(b.dataset.k);
+      if(c.checked&&i>-1)cfg.hide.splice(i,1);if(!c.checked&&i<0)cfg.hide.push(b.dataset.k);
+      apply();save()});
+    l.appendChild(c);l.appendChild(document.createTextNode(b.textContent));keysBox.appendChild(l);
+  });
+
+  function apply(){
+    var l=L();
+    pad.style.setProperty('--o',cfg.o);
+    pad.style.display=cfg.allHidden&&!document.body.classList.contains('edit')?'none':'';
+    document.body.classList.toggle('swap',!!cfg.swap);
+    ['dpad','act'].forEach(function(g){
+      var el=groups[g];
+      el.style.setProperty('--dx',l[g].x+'px');el.style.setProperty('--dy',l[g].y+'px');el.style.setProperty('--s',l[g].s);
+    });
+    btns.forEach(function(b){if(b.closest('.act'))b.style.display=cfg.hide.indexOf(b.dataset.k)>-1?'none':''});
+    $('sD').value=Math.round(l.dpad.s*100);$('vD').textContent=Math.round(l.dpad.s*100)+'%';
+    $('sA').value=Math.round(l.act.s*100);$('vA').textContent=Math.round(l.act.s*100)+'%';
+    $('sO').value=Math.round(cfg.o*100);$('vO').textContent=Math.round(cfg.o*100)+'%';
+    keysBox.querySelectorAll('input').forEach(function(c){c.checked=cfg.hide.indexOf(c.dataset.k)<0});
+    $('oriLbl').textContent=portrait()?'(dikey)':'(yatay)';
+    $('hideBtn').textContent=cfg.allHidden?'Kontrolleri göster':'Kontrolleri gizle';
+  }
+  function keepOnScreen(g){
+    var el=groups[g],l=L()[g],r=el.getBoundingClientRect(),W=innerWidth,H=innerHeight;
+    if(r.left<0)l.x-=r.left;if(r.right>W)l.x-=r.right-W;
+    if(r.top<0)l.y-=r.top;if(r.bottom>H)l.y-=r.bottom-H;
+    el.style.setProperty('--dx',l.x+'px');el.style.setProperty('--dy',l.y+'px');
+  }
+
+  // sürükleyerek taşıma (Taşı modunda)
+  ['dpad','act'].forEach(function(g){
+    var el=groups[g],sx,sy,ox,oy,drag=false;
+    el.addEventListener('pointerdown',function(ev){
+      if(!document.body.classList.contains('edit'))return;
+      drag=true;sx=ev.clientX;sy=ev.clientY;ox=L()[g].x;oy=L()[g].y;
+      try{el.setPointerCapture(ev.pointerId)}catch(e){} ev.preventDefault();
+    });
+    el.addEventListener('pointermove',function(ev){
+      if(!drag)return;var l=L()[g];l.x=ox+ev.clientX-sx;l.y=oy+ev.clientY-sy;
+      el.style.setProperty('--dx',l.x+'px');el.style.setProperty('--dy',l.y+'px');keepOnScreen(g);
+    });
+    function end(){if(drag){drag=false;save()}}
+    el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+  });
+
+  function setEdit(on){
+    document.body.classList.toggle('edit',on);$('editBtn').classList.toggle('on',on);
+    $('editBtn').textContent=on?'✔ Taşıma açık':'✥ Taşı (sürükle)';apply();
+  }
+  $('editBtn').addEventListener('click',function(){setEdit(!document.body.classList.contains('edit'))});
+  $('swapBtn').addEventListener('click',function(){
+    cfg.swap=!cfg.swap;['p','l'].forEach(function(o){['dpad','act'].forEach(function(g){cfg[o][g].x=0})});apply();save()});
+  $('sD').addEventListener('input',function(){L().dpad.s=this.value/100;apply();keepOnScreen('dpad');save()});
+  $('sA').addEventListener('input',function(){L().act.s=this.value/100;apply();keepOnScreen('act');save()});
+  $('sO').addEventListener('input',function(){cfg.o=this.value/100;apply();save()});
+  $('hideBtn').addEventListener('click',function(){cfg.allHidden=!cfg.allHidden;apply();save()});
+  $('resetBtn').addEventListener('click',function(){
+    var h=cfg.allHidden;cfg={o:.85,hide:[],allHidden:false,swap:false,p:mk(),l:mk()};setEdit(false);apply();save()});
+  $('closeBtn').addEventListener('click',function(){setEdit(false);panel.classList.remove('open')});
+  $('cfgBtn').addEventListener('click',function(){
+    var o=panel.classList.toggle('open');if(!o)setEdit(false);if(o&&cfg.allHidden){cfg.allHidden=false;save()}apply()});
+  // tuş/menüye dokunma oyuna gitmesin
+  panel.addEventListener('pointerdown',function(e){e.stopPropagation()});
+  $('cfgBtn').addEventListener('pointerdown',function(e){e.stopPropagation()});
+
+  window.addEventListener('resize',function(){apply();keepOnScreen('dpad');keepOnScreen('act')});
+  window.addEventListener('orientationchange',function(){setTimeout(function(){apply();keepOnScreen('dpad');keepOnScreen('act')},250)});
+  document.addEventListener('fullscreenchange',function(){setTimeout(function(){apply();keepOnScreen('dpad');keepOnScreen('act')},250)});
+  document.addEventListener('webkitfullscreenchange',function(){setTimeout(function(){apply();keepOnScreen('dpad');keepOnScreen('act')},250)});
+  apply();
+})();
 </script></body></html>

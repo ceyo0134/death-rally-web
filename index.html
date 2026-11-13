@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="tr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Death Rally</title>
+<link rel="stylesheet" href="js-dos/js-dos.css">
+<style>
+:root{--bg:#0b0b0d;--fg:#eee;--btn:#2a2a30;--btn-on:#c0392b;box-sizing:border-box;
+ padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif;
+ overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{display:flex;flex-direction:column}
+#game{width:100%;aspect-ratio:4/3;max-height:62vh;margin:0 auto;background:#000;position:relative}
+#pad{flex:1;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;gap:10px;touch-action:none}
+.dpad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(3,64px);gap:6px}
+.act{display:grid;grid-template-columns:repeat(2,76px);gap:8px}
+button{touch-action:none;border:0;border-radius:14px;background:var(--btn);color:var(--fg);font:600 15px system-ui;
+ -webkit-tap-highlight-color:transparent}
+button.on{background:var(--btn-on)}
+.sp{visibility:hidden}
+@media (min-width:900px){#pad{display:none}#game{max-height:none;max-width:960px}}
+</style></head><body>
+<div id="game"></div>
+<div id="pad">
+ <div class="dpad">
+  <span class="sp"></span><button data-k="265">▲</button><span class="sp"></span>
+  <button data-k="263">◀</button><span class="sp"></span><button data-k="262">▶</button>
+  <span class="sp"></span><button data-k="264">▼</button><span class="sp"></span>
+ </div>
+ <div class="act">
+  <button data-k="341">Ctrl</button><button data-k="342">Alt</button>
+  <button data-k="32">Boşluk</button><button data-k="257">Enter</button>
+  <button data-k="256">Esc</button><button data-k="258">Tab</button>
+ </div>
+</div>
+<script src="js-dos/js-dos.js"></script>
+<script>
+var ci=null;
+Dos(document.getElementById('game'),{
+  url:'game/death-rally.jsdos',
+  pathPrefix:'js-dos/emulators/',
+  onEvent:function(e,arg){ if(e==='ci-ready') ci=arg; }
+});
+// Touch / mouse buttons -> DOS key events (GLFW key codes used by js-dos)
+document.querySelectorAll('#pad button').forEach(function(b){
+  var k=+b.dataset.k;
+  function down(ev){ev.preventDefault();b.classList.add('on');if(ci)ci.sendKeyEvent(k,true)}
+  function up(ev){ev.preventDefault();b.classList.remove('on');if(ci)ci.sendKeyEvent(k,false)}
+  b.addEventListener('pointerdown',function(ev){b.setPointerCapture(ev.pointerId);down(ev)});
+  b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);
+  b.addEventListener('contextmenu',function(ev){ev.preventDefault()});
+});
+</script></body></html>
